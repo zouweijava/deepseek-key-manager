@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepSeek API 密钥余额管理器</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f8;
+      --surface: #ffffff;
+      --surface2: #f5f6fa;
+      --border: #e4e7f0;
+      --accent: #4a7cf7;
+      --accent-hover: #3366e8;
+      --accent-light: rgba(74,124,247,0.08);
+      --green: #10b981;
+      --green-light: rgba(16,185,129,0.1);
+      --red: #ef4444;
+      --red-light: rgba(239,68,68,0.1);
+      --yellow: #f59e0b;
+      --yellow-light: rgba(245,158,11,0.1);
+      --text: #1e2336;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Top banner ── */
+    .top-banner {
+      background: linear-gradient(135deg, #5b6ef5 0%, #7c4fd4 50%, #9b3fc8 100%);
+      padding: 32px 0 48px;
+      color: #fff;
+    }
+    .top-banner-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .top-banner h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .top-banner p { font-size: 14px; opacity: 0.82; }
+
+    .container {
+      max-width: 1000px;
+      margin: -24px auto 0;
+      padding: 0 20px 40px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 20px 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-value.green { color: var(--green); }
+    .stat-value.yellow { color: var(--yellow); }
+    .stat-value.red { color: var(--red); }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .panel-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title::before {
+      content: '+';
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .input-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .input-wrap { flex: 1; min-width: 260px; }
+    .input-wrap input, .input-wrap textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: 'Courier New', monospace;
+    }
+    .input-wrap textarea {
+      resize: vertical;
+      min-height: 82px;
+    }
+    .input-wrap input:focus, .input-wrap textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(74,124,247,0.12);
+      background: #fff;
+    }
+    .input-wrap input::placeholder, .input-wrap textarea::placeholder {
+      color: var(--text-dim);
+    }
+    .input-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.18s;
+      display: inline-flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(74,124,247,0.35); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .btn-danger {
+      background: var(--red-light);
+      color: var(--red);
+      border: 1.5px solid transparent;
+    }
+    .btn-danger:hover { border-color: var(--red); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-icon-only { padding: 6px 10px; font-size: 14px; min-width: 32px; justify-content: center; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-title { font-size: 15px; font-weight: 600; }
+    .table-actions { display: flex; gap: 8px; }
+
+    .table-toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .btn-refresh      { background: #4a7cf7; color: #fff; }
+    .btn-refresh:hover { background: #3366e8; }
+    .btn-refresh:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-export-json  { background: #22c55e; color: #fff; }
+    .btn-export-json:hover { background: #16a34a; }
+    .btn-export-txt   { background: #16a34a; color: #fff; }
+    .btn-export-txt:hover { background: #15803d; }
+    .btn-clear-table  { background: #ef4444; color: #fff; margin-left: auto; }
+    .btn-clear-table:hover { background: #dc2626; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--surface2);
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f7f8fd; }
+    tbody td {
+      padding: 13px 16px;
+      font-size: 13px;
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    .key-cell { font-family: 'Courier New', monospace; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+    .key-masked { color: var(--text-muted); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green { background: var(--green-light); color: var(--green); }
+    .badge-red { background: var(--red-light); color: var(--red); }
+    .badge-yellow { background: var(--yellow-light); color: var(--yellow); }
+    .badge-gray { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .balance-val { font-weight: 700; font-size: 14px; }
+    .balance-val.green { color: var(--green); }
+    .balance-val.yellow { color: var(--yellow); }
+    .balance-val.red { color: var(--red); }
+
+    .action-btns { display: flex; gap: 6px; align-items: center; }
+
+    .empty-state {
+      text-align: center;
+      padding: 52px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 38px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── Progress bar ── */
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+      width: 80px;
+    }
+    .progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+    .progress-fill.green { background: var(--green); }
+    .progress-fill.yellow { background: var(--yellow); }
+    .progress-fill.red { background: var(--red); }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      z-index: 9999;
+    }
+    .toast {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      padding: 10px 16px;
+      font-size: 13px;
+      min-width: 220px;
+      color: var(--text);
+      animation: slideIn 0.2s ease;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes slideIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(74,124,247,0.25);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toggle btn ── */
+    .btn-eye {
+      background: none; border: none; cursor: pointer;
+      font-size: 13px; padding: 2px 4px;
+      color: var(--text-dim);
+      transition: color 0.15s;
+    }
+    .btn-eye:hover { color: var(--accent); }
+
+    @media (max-width: 640px) {
+      .stats-bar { grid-template-columns: 1fr 1fr; }
+      .input-row { flex-direction: column; }
+      thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top banner -->
+  <div class="top-banner">
+    <div class="top-banner-inner">
+      <h1>🔑 API密钥余额管理器</h1>
+      <p>支持批量管理 DeepSeek API密钥和查询余额</p>
+    </div>
+  </div>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-total">0</div>
+      <div class="stat-label">API密钥总数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="stat-valid">0</div>
+      <div class="stat-label">有效密钥数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="stat-balance">¥ 0.00</div>
+      <div class="stat-label">剩余余额</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value yellow" id="stat-invalid">0</div>
+      <div class="stat-label">失效 / 未查询</div>
+    </div>
+  </div>
+
+  <!-- Add Keys Panel -->
+  <div class="panel">
+    <div class="panel-title">添加 API 密钥</div>
+    <div class="input-row">
+      <div class="input-wrap" style="flex:2">
+        <textarea id="key-input" placeholder="输入单个或多个 API Key，每行一个&#10;例如：sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></textarea>
+        <div class="input-hint">支持批量添加，每行一个 Key；重复的 Key 会自动跳过</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;justify-content:flex-start;padding-top:0">
+        <button class="btn btn-primary" id="btn-add" onclick="addKeys()">
+          + 添加密钥
+        </button>
+        <button class="btn btn-secondary" onclick="queryAll()">
+          ↻ 查询全部
+        </button>
+        <button class="btn btn-danger" onclick="clearAll()">
+          ✕ 清空全部
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keys Table -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <div class="table-title">📋 API密钥列表 <span id="key-count" style="color:var(--text-muted);font-weight:400;font-size:13px"></span></div>
+    </div>
+    <div class="table-toolbar">
+      <button class="btn btn-refresh" id="btn-refresh-all" onclick="queryAll()">↻ 刷新余额</button>
+      <button class="btn btn-export-json" onclick="exportJSON()">↓ 导出JSON</button>
+      <button class="btn btn-export-txt" onclick="exportKeys()">↓ 导出TXT</button>
+      <button class="btn btn-clear-table" onclick="clearAll()">🗑 清空</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>API Key</th>
+          <th style="width:120px">余额</th>
+          <th style="width:100px">状态</th>
+          <th style="width:130px">最后查询</th>
+          <th style="width:120px">操作</th>
+        </tr>
+      </thead>
+      <tbody id="key-table-body">
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="icon">🔐</div>
+              <p>暂无密钥，请在上方添加 API Key</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let keys = JSON.parse(localStorage.getItem('ds_keys') || '[]');
+
+// ─── Persist ─────────────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('ds_keys', JSON.stringify(keys));
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ─── Mask key ────────────────────────────────────────────────────────────────
+function maskKey(k) {
+  if (k.length <= 12) return k.slice(0, 4) + '****';
+  return k.slice(0, 8) + '****' + k.slice(-6);
+}
+
+// ─── Add keys ────────────────────────────────────────────────────────────────
+function addKeys() {
+  const raw = document.getElementById('key-input').value.trim();
+  if (!raw) { toast('请输入至少一个 API Key', 'error'); return; }
+
+  const lines = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+  let added = 0, skipped = 0;
+
+  lines.forEach(k => {
+    if (!k.startsWith('sk-')) { skipped++; return; }
+    if (keys.find(x => x.key === k)) { skipped++; return; }
+    keys.push({
+      id: Date.now() + Math.random(),
+      key: k,
+      balance: null,
+      total: null,
+      status: 'pending',
+      addedAt: new Date().toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+    });
+    added++;
+  });
+
+  save();
+  render();
+  document.getElementById('key-input').value = '';
+
+  if (added > 0) toast(`成功添加 ${added} 个密钥${skipped ? `，跳过 ${skipped} 个` : ''}`, 'success');
+  else toast(`未添加新密钥（${skipped} 个已存在或格式不正确）`, 'error');
+}
+
+// ─── Query single key ────────────────────────────────────────────────────────
+async function queryKey(id) {
+  const entry = keys.find(x => x.id === id);
+  if (!entry) return;
+
+  entry.status = 'loading';
+  render();
+
+  try {
+    const res = await fetch('https://api.deepseek.com/user/balance', {
+      headers: {
+        'Authorization': `Bearer ${entry.key}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      entry.status = 'invalid';
+      entry.balance = null;
+      entry.lastQueried = new Date().toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      toast(`密钥 ${maskKey(entry.key)} 无效或已过期`, 'error');
+    } else if (!res.ok) {
+      entry.status = 'error';
+      entry.lastQueried = new Date().toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      toast(`查询失败 (HTTP ${res.status})`, 'error');
+    } else {
+      const data = await res.json();
+      // DeepSeek balance API response structure
+      const info = data.balance_infos?.[0] || data;
+      const avail = parseFloat(info.total_balance ?? info.balance ?? 0);
+      const granted = parseFloat(info.granted_balance ?? 0);
+      const topped = parseFloat(info.topped_up_balance ?? 0);
+      entry.balance = avail;
+      entry.total = (granted + topped) || null;
+      entry.status = avail > 0 ? 'valid' : 'empty';
+      entry.lastQueried = new Date().toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      toast(`密钥 ${maskKey(entry.key)} 余额：¥${avail.toFixed(2)}`, 'success');
+    }
+  } catch (e) {
+    // CORS fallback: try via proxy or show CORS hint
+    entry.status = 'cors';
+    toast('跨域限制，请使用代理或在服务端查询', 'error');
+  }
+
+  save();
+  render();
+}
+
+// ─── Query all ───────────────────────────────────────────────────────────────
+async function queryAll() {
+  if (keys.length === 0) { toast('请先添加密钥', 'error'); return; }
+  const btn = document.getElementById('btn-refresh-all');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 刷新中...';
+
+  for (const entry of keys) {
+    if (entry.status !== 'loading') await queryKey(entry.id);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '↻ 刷新余额';
+  toast('全部查询完成', 'success');
+}
+
+// ─── Delete key ──────────────────────────────────────────────────────────────
+function deleteKey(id) {
+  keys = keys.filter(x => x.id !== id);
+  save();
+  render();
+  toast('已删除', 'info');
+}
+
+// ─── Copy key ────────────────────────────────────────────────────────────────
+function copyKey(key) {
+  navigator.clipboard.writeText(key).then(() => toast('已复制到剪贴板', 'success'));
+}
+
+// ─── Clear all ───────────────────────────────────────────────────────────────
+function clearAll() {
+  if (keys.length === 0) return;
+  if (!confirm(`确定要清空全部 ${keys.length} 个密钥吗？`)) return;
+  keys = [];
+  save();
+  render();
+  toast('已清空', 'info');
+}
+
+// ─── Export JSON ─────────────────────────────────────────────────────────────
+function exportJSON() {
+  if (keys.length === 0) { toast('没有可导出的密钥', 'error'); return; }
+  const data = keys.map(k => ({
+    key: k.key,
+    balance: k.balance,
+    total: k.total,
+    status: statusLabel(k.status),
+    addedAt: k.addedAt
+  }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `deepseek-keys-${Date.now()}.json`;
+  a.click();
+  toast('导出 JSON 成功', 'success');
+}
+
+// ─── Export TXT ──────────────────────────────────────────────────────────────
+function exportKeys() {
+  if (keys.length === 0) { toast('没有可导出的密钥', 'error'); return; }
+  const lines = keys.map(k =>
+    `${k.key}\t余额:${k.balance != null ? '¥'+k.balance.toFixed(4) : '未查询'}\t状态:${statusLabel(k.status)}`
+  );
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `deepseek-keys-${Date.now()}.txt`;
+  a.click();
+  toast('导出成功', 'success');
+}
+
+// ─── Toggle key visibility ───────────────────────────────────────────────────
+function toggleKey(id) {
+  const el = document.getElementById(`key-text-${id}`);
+  const btn = document.getElementById(`key-toggle-${id}`);
+  const entry = keys.find(x => x.id === id);
+  if (!entry) return;
+  if (el.dataset.shown === '1') {
+    el.textContent = maskKey(entry.key);
+    el.dataset.shown = '0';
+    btn.textContent = '👁';
+  } else {
+    el.textContent = entry.key;
+    el.dataset.shown = '1';
+    btn.textContent = '🙈';
+  }
+}
+
+// ─── Status helpers ──────────────────────────────────────────────────────────
+function statusLabel(s) {
+  return { valid:'有效', empty:'余额为零', invalid:'无效', error:'错误', loading:'查询中', pending:'未查询', cors:'跨域限制' }[s] || s;
+}
+
+function statusBadge(s) {
+  const map = {
+    valid:   ['badge-green', '● 有效'],
+    empty:   ['badge-yellow', '● 余额为零'],
+    invalid: ['badge-red', '● 无效'],
+    error:   ['badge-red', '● 错误'],
+    loading: ['badge-gray', '⟳ 查询中'],
+    pending: ['badge-gray', '○ 未查询'],
+    cors:    ['badge-yellow', '⚠ 跨域'],
+  };
+  const [cls, label] = map[s] || ['badge-gray', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function balanceColor(v) {
+  if (v == null) return '';
+  if (v > 10) return 'green';
+  if (v > 0) return 'yellow';
+  return 'red';
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+function render() {
+  const tbody = document.getElementById('key-table-body');
+
+  if (keys.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">🔐</div><p>暂无密钥，请在上方添加 API Key</p></div></td></tr>`;
+    updateStats();
+    document.getElementById('key-count').textContent = '';
+    return;
+  }
+
+  // 按余额从高到低排序，未查询的排最后
+  const sorted = [...keys].sort((a, b) => {
+    const av = a.balance ?? -Infinity;
+    const bv = b.balance ?? -Infinity;
+    return bv - av;
+  });
+  tbody.innerHTML = sorted.map((entry, i) => {
+    const balanceHtml = entry.status === 'loading'
+      ? '<span class="spinner"></span>'
+      : entry.balance != null
+        ? `<span class="balance-val ${balanceColor(entry.balance)}">¥${entry.balance.toFixed(2)}</span>`
+        : `<span style="color:var(--text-dim)">—</span>`;
+
+    const lastQueried = entry.lastQueried
+      ? `<span style="color:var(--text-muted);font-size:12px">${entry.lastQueried}</span>`
+      : `<span style="color:var(--text-dim);font-size:12px">未查询</span>`;
+
+    return `
+    <tr>
+      <td style="color:var(--text-muted);font-size:13px">${i + 1}</td>
+      <td>
+        <div class="key-cell">
+          <span id="key-text-${entry.id}" data-shown="0" class="key-masked">${maskKey(entry.key)}</span>
+          <button id="key-toggle-${entry.id}" onclick="toggleKey(${entry.id})" title="显示/隐藏" class="btn-eye">👁</button>
+        </div>
+      </td>
+      <td>${balanceHtml}</td>
+      <td>${statusBadge(entry.status)}</td>
+      <td>${lastQueried}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn btn-secondary btn-sm btn-icon-only" onclick="queryKey(${entry.id})" title="查询余额" ${entry.status==='loading'?'disabled':''}>
+            ${entry.status==='loading'?'<span class="spinner"></span>':'↻'}
+          </button>
+          <button class="btn btn-secondary btn-sm btn-icon-only" onclick="copyKey('${entry.key}')" title="复制 Key">⎘</button>
+          <button class="btn btn-danger btn-sm btn-icon-only" onclick="deleteKey(${entry.id})" title="删除">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const validCount = keys.filter(k => k.balance != null && k.balance > 0).length;
+  document.getElementById('key-count').textContent = `（共 ${keys.length} 个，${validCount} 个有效）`;
+  updateStats();
+}
+
+function updateStats() {
+  const total = keys.length;
+  const queried = keys.filter(k => k.balance != null);
+  const valid = keys.filter(k => k.balance != null && k.balance > 0).length;
+  const invalid = keys.filter(k => k.status === 'invalid' || k.status === 'empty' || k.status === 'pending').length;
+  const totalBalance = queried.reduce((s, k) => s + (k.balance || 0), 0);
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-valid').textContent = valid;
+  document.getElementById('stat-balance').textContent = `¥ ${totalBalance.toFixed(2)}`;
+  document.getElementById('stat-invalid').textContent = invalid;
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+render();
+
+// Enter key in textarea = add (Ctrl+Enter)
+document.getElementById('key-input').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') addKeys();
+});
+</script>
+</body>
+</html>
