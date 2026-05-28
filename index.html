@@ -178,6 +178,7 @@
       box-shadow: var(--shadow);
       overflow: hidden;
     }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .table-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 16px 20px;
@@ -314,14 +315,44 @@
       font-size: 13px; padding: 2px 4px;
       color: var(--text-dim);
       transition: color 0.15s;
+      flex-shrink: 0;
     }
     .btn-eye:hover { color: var(--accent); }
 
     @media (max-width: 640px) {
       .stats-bar { grid-template-columns: 1fr 1fr; }
       .input-row { flex-direction: column; }
-      thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+      /* 隐藏状态列(4)和最后查询列(5) */
+      thead th:nth-child(4), tbody td:nth-child(4),
+      thead th:nth-child(5), tbody td:nth-child(5) { display: none; }
+      /* 操作列只保留删除按钮 */
+      .action-btns .btn-copy { display: none; }
+      thead th { padding: 8px 10px; }
+      tbody td { padding: 10px 10px; }
+      .key-cell { font-size: 11px; }
+      .balance-val { font-size: 13px; }
+      /* 移动端隐藏眼睛按钮，改为点击 key 文本切换 */
+      .btn-eye { display: none; }
+      .key-text-tap {
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        display: flex; align-items: center; gap: 5px;
+      }
+      .btn-copy-inline {
+        display: inline-flex !important;
+      }
     }
+    /* 行内复制按钮，默认桌面端隐藏，移动端显示 */
+    .btn-copy-inline {
+      display: none;
+      background: none; border: none; cursor: pointer;
+      padding: 2px 3px; color: var(--text-dim);
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-copy-inline:hover { color: var(--accent); }
+    .btn-copy-inline svg { width: 13px; height: 13px; display: block; }
   </style>
 </head>
 <body>
@@ -389,6 +420,7 @@
       <button class="btn btn-export-txt" onclick="exportKeys()">↓ 导出TXT</button>
       <button class="btn btn-clear-table" onclick="clearAll()">🗑 清空</button>
     </div>
+    <div class="table-scroll">
     <table>
       <thead>
         <tr>
@@ -411,6 +443,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 
 </div>
@@ -667,8 +700,14 @@ function render() {
       <td style="color:var(--text-muted);font-size:13px">${i + 1}</td>
       <td>
         <div class="key-cell">
-          <span id="key-text-${entry.id}" data-shown="0" class="key-masked">${maskKey(entry.key)}</span>
+          <span id="key-text-${entry.id}" data-shown="0" class="key-masked key-text-tap" onclick="toggleKey(${entry.id})">${maskKey(entry.key)}</span>
           <button id="key-toggle-${entry.id}" onclick="toggleKey(${entry.id})" title="显示/隐藏" class="btn-eye">👁</button>
+          <button class="btn-copy-inline" onclick="copyKey('${entry.key}')" title="复制 Key">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+              <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+            </svg>
+          </button>
         </div>
       </td>
       <td>${balanceHtml}</td>
@@ -679,7 +718,7 @@ function render() {
           <button class="btn btn-secondary btn-sm btn-icon-only" onclick="queryKey(${entry.id})" title="查询余额" ${entry.status==='loading'?'disabled':''}>
             ${entry.status==='loading'?'<span class="spinner"></span>':'↻'}
           </button>
-          <button class="btn btn-secondary btn-sm btn-icon-only" onclick="copyKey('${entry.key}')" title="复制 Key">⎘</button>
+          <button class="btn btn-secondary btn-sm btn-icon-only btn-copy" onclick="copyKey('${entry.key}')" title="复制 Key">⎘</button>
           <button class="btn btn-danger btn-sm btn-icon-only" onclick="deleteKey(${entry.id})" title="删除">✕</button>
         </div>
       </td>
