@@ -322,9 +322,11 @@
     @media (max-width: 640px) {
       .stats-bar { grid-template-columns: 1fr 1fr; }
       .input-row { flex-direction: column; }
-      /* 隐藏状态列(4)和最后查询列(5) */
+      /* 隐藏总额(4)、已使用(5)、状态(6)、最后查询(7) */
       thead th:nth-child(4), tbody td:nth-child(4),
-      thead th:nth-child(5), tbody td:nth-child(5) { display: none; }
+      thead th:nth-child(5), tbody td:nth-child(5),
+      thead th:nth-child(6), tbody td:nth-child(6),
+      thead th:nth-child(7), tbody td:nth-child(7) { display: none; }
       /* 操作列只保留删除按钮 */
       .action-btns .btn-copy { display: none; }
       thead th { padding: 8px 10px; }
@@ -427,6 +429,8 @@
           <th style="width:40px">#</th>
           <th>API Key</th>
           <th style="width:120px">余额</th>
+          <th style="width:100px">总额</th>
+          <th style="width:100px">已使用</th>
           <th style="width:100px">状态</th>
           <th style="width:130px">最后查询</th>
           <th style="width:120px">操作</th>
@@ -434,7 +438,7 @@
       </thead>
       <tbody id="key-table-body">
         <tr>
-          <td colspan="6">
+          <td colspan="8">
             <div class="empty-state">
               <div class="icon">🔐</div>
               <p>暂无密钥，请在上方添加 API Key</p>
@@ -601,6 +605,7 @@ function exportJSON() {
   const data = keys.map(k => ({
     key: k.key,
     balance: k.balance,
+    quota: k.quota,
     total: k.total,
     status: statusLabel(k.status),
     addedAt: k.addedAt
@@ -644,6 +649,23 @@ function toggleKey(id) {
   }
 }
 
+// ─── Set quota ────────────────────────────────────────────────────────────────
+function setQuota(id) {
+  const entry = keys.find(x => x.id === id);
+  if (!entry) return;
+  const current = entry.quota != null ? entry.quota : '';
+  const input = prompt('设置总额度（¥）：', current);
+  if (input === null) return;
+  const val = parseFloat(input);
+  if (isNaN(val) || val < 0) {
+    toast('请输入有效的金额', 'error');
+    return;
+  }
+  entry.quota = val || null;
+  save();
+  render();
+}
+
 // ─── Status helpers ──────────────────────────────────────────────────────────
 function statusLabel(s) {
   return { valid:'有效', empty:'余额为零', invalid:'无效', error:'错误', loading:'查询中', pending:'未查询', cors:'跨域限制' }[s] || s;
@@ -675,7 +697,7 @@ function render() {
   const tbody = document.getElementById('key-table-body');
 
   if (keys.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">🔐</div><p>暂无密钥，请在上方添加 API Key</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">🔐</div><p>暂无密钥，请在上方添加 API Key</p></div></td></tr>`;
     updateStats();
     document.getElementById('key-count').textContent = '';
     return;
@@ -698,6 +720,14 @@ function render() {
       ? `<span style="color:var(--text-muted);font-size:12px">${entry.lastQueried}</span>`
       : `<span style="color:var(--text-dim);font-size:12px">未查询</span>`;
 
+    const quotaHtml = entry.quota != null
+      ? `<span class="balance-val" style="cursor:pointer" onclick="setQuota(${entry.id})" title="点击修改配额">¥${entry.quota.toFixed(2)}</span>`
+      : `<span style="cursor:pointer;color:var(--text-dim);font-size:12px;border-bottom:1px dashed var(--border)" onclick="setQuota(${entry.id})" title="点击设置配额">设置</span>`;
+
+    const usedHtml = entry.quota != null && entry.balance != null
+      ? `<span class="balance-val ${balanceColor(entry.quota - entry.balance)}">¥${(entry.quota - entry.balance).toFixed(2)}</span>`
+      : `<span style="color:var(--text-dim)">—</span>`;
+
     return `
     <tr>
       <td style="color:var(--text-muted);font-size:13px">${i + 1}</td>
@@ -714,6 +744,8 @@ function render() {
         </div>
       </td>
       <td>${balanceHtml}</td>
+      <td>${quotaHtml}</td>
+      <td>${usedHtml}</td>
       <td>${statusBadge(entry.status)}</td>
       <td>${lastQueried}</td>
       <td>
