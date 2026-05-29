@@ -532,8 +532,11 @@ async function queryKey(id) {
       toast(`查询失败 (HTTP ${res.status})`, 'error');
     } else {
       const data = await res.json();
-      // DeepSeek balance API response structure
-      const info = data.balance_infos?.[0] || data;
+      // 优先取 CNY，没有则取第一条，兼容单对象格式
+      const infos = data.balance_infos;
+      const info = Array.isArray(infos)
+        ? (infos.find(x => x.currency === 'CNY') ?? infos[0])
+        : (infos ?? data);
       const avail = parseFloat(info.total_balance ?? info.balance ?? 0);
       const granted = parseFloat(info.granted_balance ?? 0);
       const topped = parseFloat(info.topped_up_balance ?? 0);
